@@ -20,26 +20,29 @@ rankall <- function( outcome, num ){
   }
   
   ##process
-  require(plyr)
   good <- complete.cases(hosp_outcomes[c(2,7,field_num)])
   hospitals <- hosp_outcomes[good,c(2,7,field_num)]
-  hospitals <- arrange(hospitals,desc(hospitals[3]),
-                       hospitals$State,
-                       hospitals$Hospital.Name)
+  names(hospitals)[3] <- c("MortRate")
 
-  rank_hosp <- c()
-  u_hosp <- unique(hospitals$State)
-  for( st in unique(hospitals$State) ){
-    st_hosp <- hospitals[hospitals$State == st,]
-    st_hosp$StateRank <- c(1:nrow(st_hosp))
-    rank_hosp <- rbind(rank_hosp,st_hosp)
-  }
+  sp <- split(hospitals,hospitals$State)
+  res <- sapply(sp, function(x, num) {
+    # Order by Deaths and then HospitalName
+     x = x[order(x$MortRate, x$Hospital.Name),]
+
+    # Return
+    if(class(num) == "character") {
+      if(num == "best") {
+        return (x$Hospital.Name[1])
+      }
+      else if(num == "worst") {
+        return (x$Hospital.Name[nrow(x)])
+      }
+    }
+    else {
+      return (x$Hospital.Name[num])
+    }
+  },num)
   
-  if(num == "best"){ 
-    num <- 1
-  }
-  
-  result_final <- rank_hosp[rank_hosp$StateRank == num,c("Hospital.Name","State")]
-  names(result_final) <- c("Hospital","State")
-  arrange(result_final,result_final$State)
+  data.frame(hospital=unlist(res), state=names(res))
+
 }
